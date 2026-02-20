@@ -1,121 +1,219 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Surigao City LGU Office</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <!-- Marked for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="background-mesh"></div>
 
     <div class="main-layout">
-        <div class="holo-container">
-            <canvas id="holo-sphere"></canvas>
-            <div class="voice-status">Waiting for command...</div>
+      <div class="holo-container">
+        <canvas id="holo-sphere"></canvas>
+        <div class="voice-status">Waiting for command...</div>
+      </div>
+
+      <!-- Floating toggle button (visible when drawer is closed) -->
+      <button
+        class="drawer-fab"
+        id="drawer-fab"
+        onclick="toggleDrawer()"
+        title="Chat Now"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+          ></path>
+        </svg>
+        <span class="fab-label">Chat Now</span>
+      </button>
+
+      <!-- Drawer overlay (mobile) -->
+      <div
+        class="drawer-overlay"
+        id="drawer-overlay"
+        onclick="toggleDrawer()"
+      ></div>
+
+      <!-- Chat Drawer -->
+      <div class="chat-drawer open" id="chat-drawer">
+        <!-- Drag handle (mobile) -->
+        <div class="drawer-handle" id="drawer-handle">
+          <div class="handle-bar"></div>
         </div>
 
-        <!-- Floating toggle button (visible when drawer is closed) -->
-        <button class="drawer-fab" id="drawer-fab" onclick="toggleDrawer()" title="Open Chat">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-        </button>
-
-        <!-- Drawer overlay (mobile) -->
-        <div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()"></div>
-
-        <!-- Chat Drawer -->
-        <div class="chat-drawer open" id="chat-drawer">
-            <!-- Drag handle (mobile) -->
-            <div class="drawer-handle" id="drawer-handle">
-                <div class="handle-bar"></div>
+        <div class="chat-container glass-panel">
+          <header class="chat-header">
+            <div class="logo-area">
+              <img
+                src="{{ url_for('static', filename='images/logo.png') }}"
+                alt="LGU Logo"
+                class="header-logo"
+              />
+              <h1>Surigao City LGU</h1>
+              <span class="lang-badge" id="lang-badge">EN</span>
             </div>
-
-            <div class="chat-container glass-panel">
-                <header class="chat-header">
-                    <div class="logo-area">
-                        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="LGU Logo"
-                            class="header-logo">
-                        <h1>Surigao City LGU</h1>
-                        <span class="lang-badge" id="lang-badge">EN</span>
-                    </div>
-                    <div class="header-actions">
-                        <button id="voice-toggle" class="icon-btn" title="Toggle Voice">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                                <line x1="12" y1="19" x2="12" y2="23"></line>
-                                <line x1="8" y1="23" x2="16" y2="23"></line>
-                            </svg>
-                        </button>
-                        <button class="icon-btn" onclick="toggleDrawer()" title="Close Chat">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                            </svg>
-                        </button>
-                        <button id="clear-history" class="icon-btn" title="Clear History">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path
-                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
-                                </path>
-                            </svg>
-                        </button>
-                    </div>
-                </header>
-
-                <div class="chat-messages" id="chat-messages">
-                    <!-- Messages checked from localStorage on load -->
-                </div>
-
-                <div class="quick-actions-carousel">
-                    <div class="overflow-wrap">
-                        <button class="chip" onclick="sendQuickMessage('Business Permit Requirements')">📜 Business
-                            Permit</button>
-                        <button class="chip" onclick="sendQuickMessage('Birth Certificate Process')">👶 Birth
-                            Cert</button>
-                        <button class="chip" onclick="sendQuickMessage('Real Property Tax')">🏠 Property Tax</button>
-                        <button class="chip" onclick="sendQuickMessage('Health Center Schedule')">🏥 Health</button>
-                        <button class="chip" onclick="sendQuickMessage('Senior Citizen ID')">👵 Senior ID</button>
-                        <button class="chip" onclick="sendQuickMessage('Barangay Clearance')">🏘️ Barangay</button>
-                    </div>
-                </div>
-
-                <div class="input-area glass-input" id="input-area">
-                    <textarea id="user-input" placeholder="Ask anything..." rows="1"></textarea>
-                    <button id="stop-btn" onclick="stopSpeaking()" title="Stop speaking" style="display:none;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                            <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-                        </svg>
-                    </button>
-                    <button id="send-btn" onclick="sendMessage()">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                    </button>
-                </div>
+            <div class="header-actions">
+              <button id="voice-toggle" class="icon-btn" title="Toggle Voice">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+                  ></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+              </button>
+              <button
+                class="icon-btn"
+                onclick="toggleDrawer()"
+                title="Close Chat"
+              >
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              <button id="clear-history" class="icon-btn" title="Clear History">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path
+                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                  ></path>
+                </svg>
+              </button>
             </div>
+          </header>
+
+          <div class="chat-messages" id="chat-messages">
+            <!-- Messages checked from localStorage on load -->
+          </div>
+
+          <div class="quick-actions-carousel">
+            <div class="overflow-wrap">
+              <button
+                class="chip"
+                onclick="sendQuickMessage('Business Permit Requirements')"
+              >
+                📜 Business Permit
+              </button>
+              <button
+                class="chip"
+                onclick="sendQuickMessage('Birth Certificate Process')"
+              >
+                👶 Birth Cert
+              </button>
+              <button
+                class="chip"
+                onclick="sendQuickMessage('Real Property Tax')"
+              >
+                🏠 Property Tax
+              </button>
+              <button
+                class="chip"
+                onclick="sendQuickMessage('Health Center Schedule')"
+              >
+                🏥 Health
+              </button>
+              <button
+                class="chip"
+                onclick="sendQuickMessage('Senior Citizen ID')"
+              >
+                👵 Senior ID
+              </button>
+              <button
+                class="chip"
+                onclick="sendQuickMessage('Barangay Clearance')"
+              >
+                🏘️ Barangay
+              </button>
+            </div>
+          </div>
+
+          <div class="input-area glass-input" id="input-area">
+            <textarea
+              id="user-input"
+              placeholder="Ask anything..."
+              rows="1"
+            ></textarea>
+            <button
+              id="stop-btn"
+              onclick="stopSpeaking()"
+              title="Stop speaking"
+              style="display: none"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+              </svg>
+            </button>
+            <button id="send-btn" onclick="sendMessage()">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
         </div>
+      </div>
     </div>
 
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/sphere.js') }}"></script>
     <script src="{{ url_for('static', filename='js/voice.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-</body>
-
+  </body>
 </html>

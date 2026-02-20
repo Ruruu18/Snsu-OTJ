@@ -31,8 +31,10 @@ body {
     color: var(--text-primary);
     background: var(--bg-dark);
     margin: 0;
-    overflow: hidden;
-    height: 100vh;
+    /* Use dynamic viewport units and allow scrolling on small devices */
+    min-height: 100dvh;
+    height: auto;
+    overflow: auto;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -175,15 +177,23 @@ body {
     justify-content: center;
     box-shadow: 0 6px 24px var(--accent-glow), 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    opacity: 0;
-    transform: scale(0.8);
-    pointer-events: none;
-}
-
-.drawer-fab.visible {
     opacity: 1;
     transform: scale(1);
     pointer-events: auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.drawer-fab.hidden {
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
 }
 
 .drawer-fab:hover {
@@ -193,6 +203,27 @@ body {
 
 .drawer-fab:active {
     transform: scale(0.95);
+}
+
+.drawer-fab svg {
+    width: 24px;
+    height: 24px;
+}
+
+.fab-label {
+    display: none;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-top: 2px;
+    line-height: 1;
+}
+
+/* Desktop: FAB hidden by default */
+@media (min-width: 769px) {
+    .fab-label {
+        display: none !important;
+    }
 }
 
 /* When drawer is closed, sphere takes center stage */
@@ -335,6 +366,7 @@ body {
     animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
     transform: translateY(12px);
+    word-break: break-word;
 }
 
 .message.user {
@@ -343,6 +375,13 @@ body {
 
 .message.bot {
     align-self: flex-start;
+}
+
+/* Tighter message bubbles on very small screens */
+@media (max-width: 360px) {
+    .message {
+        max-width: 95%;
+    }
 }
 
 /* ─── Message Bubbles ─── */
@@ -560,6 +599,15 @@ textarea {
     max-height: 100px;
     outline: none;
     line-height: 1.5;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* iOS Safari fixes for mobile */
+@supports (padding: max(0px)) {
+    textarea {
+        padding: max(10px, 1em) 0;
+    }
 }
 
 textarea::placeholder {
@@ -722,14 +770,183 @@ textarea::placeholder {
 }
 
 /* ─── Responsive ─── */
+
+/* Extra small screens (< 480px) — very compact layout */
+@media (max-width: 479px) {
+    :root {
+        --radius-xl: 18px;
+        --radius-md: 12px;
+    }
+
+    body {
+        font-size: 13px;
+    }
+
+    .main-layout {
+        padding: 0;
+    }
+
+    .holo-container {
+        height: 50dvh;
+        padding-bottom: 8dvh;
+    }
+
+    .holo-container::before {
+        width: 180px;
+        height: 180px;
+    }
+
+    #holo-sphere {
+        width: min(280px, 70vmin);
+        height: min(280px, 70vmin);
+    }
+
+    .voice-status {
+        font-size: 0.65rem;
+        margin-top: 12px;
+    }
+
+    .drawer-fab {
+        width: 48px;
+        height: 48px;
+        bottom: 16px;
+        right: 16px;
+    }
+
+    .chat-drawer {
+        height: 90dvh;
+    }
+
+    .chat-header {
+        padding: 12px 14px;
+    }
+
+    .logo-area h1 {
+        font-size: 0.9rem;
+    }
+
+    .lang-badge {
+        font-size: 0.55rem;
+        padding: 2px 6px;
+    }
+
+    .header-logo {
+        width: 28px;
+        height: 28px;
+    }
+
+    .icon-btn {
+        padding: 6px;
+    }
+
+    .chat-messages {
+        padding: 12px 10px;
+        gap: 4px;
+    }
+
+    .message {
+        max-width: 90%;
+        font-size: 0.82rem;
+    }
+
+    .bubble {
+        padding: 10px 14px;
+        font-size: 0.82rem;
+        border-radius: 14px;
+    }
+
+    .timestamp {
+        font-size: 0.6rem;
+    }
+
+    .quick-actions-carousel {
+        margin: 0 10px;
+        padding: 6px 0;
+    }
+
+    .chip {
+        font-size: 0.7rem;
+        padding: 6px 12px;
+    }
+
+    .input-area {
+        margin: 8px 10px 10px;
+        padding: 4px 4px 4px 12px;
+    }
+
+    textarea {
+        font-size: 0.82rem;
+        padding: 8px 0;
+    }
+
+    #send-btn,
+    #stop-btn {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+    }
+
+    #send-btn svg,
+    #stop-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .drawer-handle {
+        padding: 8px 0 3px;
+    }
+
+    .handle-bar {
+        width: 32px;
+        height: 3px;
+    }
+}
+
+/* Tablet and small mobile (480px - 768px) */
+@media (min-width: 480px) and (max-width: 768px) {
+    .holo-container {
+        height: 60dvh;
+        padding-bottom: 10dvh;
+    }
+
+    .holo-container::before {
+        width: 300px;
+        height: 300px;
+    }
+
+    #holo-sphere {
+        width: min(350px, 80vmin);
+        height: min(350px, 80vmin);
+    }
+
+    .chat-messages {
+        padding: 14px 12px;
+    }
+
+    .message {
+        max-width: 87%;
+    }
+}
+
+/* Standard mobile (< 768px) */
 @media (max-width: 768px) {
+    /* Body adjustments to avoid centering and allow natural flow on small screens */
+    body {
+        align-items: stretch;
+        justify-content: flex-start;
+        padding-top: env(safe-area-inset-top);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        overflow: auto;
+    }
     .main-layout {
         flex-direction: column;
         padding: 0;
         gap: 0;
         justify-content: center;
-        height: 100dvh;
-        /* Use dynamic viewport height */
+        height: auto;
+        min-height: 100dvh;
+        /* Use dynamic viewport height, but allow overflow on content */
     }
 
     .holo-container {
@@ -759,11 +976,12 @@ textarea::placeholder {
         left: 0;
         right: 0;
         width: 100%;
-        height: 85dvh;
+        height: min(85dvh, calc(100dvh - 60px));
         padding: 0;
         transform: translateY(100%);
         border-radius: 24px 24px 0 0;
         overflow: hidden;
+        max-height: 85dvh;
     }
 
     .chat-drawer.open {
@@ -802,8 +1020,19 @@ textarea::placeholder {
     .drawer-fab {
         bottom: 20px;
         right: 20px;
-        width: 52px;
-        height: 52px;
+        width: 64px;
+        height: 64px;
+        font-size: 0.7rem;
+    }
+
+    .drawer-fab svg {
+        width: 24px;
+        height: 24px;
+        margin-bottom: 2px;
+    }
+
+    .fab-label {
+        display: block;
     }
 
     .chat-header {
@@ -820,5 +1049,118 @@ textarea::placeholder {
 
     .input-area {
         margin: 10px 14px 14px;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* Landscape mode on mobile — reduce sphere and adjust layout */
+@media (max-height: 500px) and (max-width: 768px) {
+    .holo-container {
+        height: 40dvh;
+        padding-bottom: 0;
+    }
+
+    .holo-container::before {
+        width: 150px;
+        height: 150px;
+    }
+
+    #holo-sphere {
+        width: min(200px, 50vmin);
+        height: min(200px, 50vmin);
+    }
+
+    .voice-status {
+        font-size: 0.65rem;
+        margin-top: 8px;
+    }
+
+    .chat-drawer {
+        height: 100dvh;
+    }
+
+    .chat-messages {
+        padding: 12px 10px;
+    }
+}
+
+/* Fold or very wide landscape */
+@media (min-width: 1024px) and (max-height: 600px) {
+    .main-layout {
+        gap: 24px;
+    }
+
+    .holo-container {
+        height: 400px;
+    }
+
+    .holo-container::before {
+        width: 350px;
+        height: 350px;
+    }
+
+    #holo-sphere {
+        width: min(380px, 75vmin);
+        height: min(380px, 75vmin);
+    }
+}
+
+/* High-density screens (iPad, large tablets) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .main-layout {
+        gap: 32px;
+        padding: 20px;
+        padding-right: 400px;
+    }
+
+    .holo-container {
+        height: 500px;
+    }
+
+    .holo-container::before {
+        width: 400px;
+        height: 400px;
+    }
+
+    #holo-sphere {
+        width: min(420px, 80vmin);
+        height: min(420px, 80vmin);
+    }
+
+    .chat-drawer {
+        width: 400px;
+    }
+
+    .main-layout {
+        padding-right: 424px;
+    }
+}
+
+/* Touch device optimization */
+@media (hover: none) and (pointer: coarse) {
+    /* Increase button padding for easier touch targets */
+    .icon-btn {
+        padding: 10px;
+    }
+
+    .chip {
+        padding: 8px 16px;
+    }
+
+    /* Remove hover effects that don't work on touch */
+    .chip:hover {
+        transform: none;
+    }
+
+    .lang-choice:hover {
+        transform: none;
+    }
+
+    #send-btn:hover {
+        transform: none;
+    }
+
+    .drawer-fab:hover {
+        transform: scale(1);
     }
 }

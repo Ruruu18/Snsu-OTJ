@@ -237,50 +237,157 @@ function updateLangBadge(langCode) {
     }
 }
 
+/* ═══════════════════════════════════════════════════════════════ */
+/* Mobile UX Management System */
+/* ═══════════════════════════════════════════════════════════════ */
+
+const MobileUX = {
+    isMobile: false,
+    elements: {
+        drawer: null,
+        fab: null,
+        overlay: null,
+        layout: null,
+        input: null
+    },
+
+    /**
+     * Initialize mobile UX system
+     */
+    init() {
+        this.detectMobile();
+        this.cacheElements();
+        this.setupEventListeners();
+        if (this.isMobile) {
+            this.initializeMobileState();
+        }
+    },
+
+    /**
+     * Detect if device is mobile
+     */
+    detectMobile() {
+        this.isMobile = window.innerWidth <= 768;
+    },
+
+    /**
+     * Cache DOM elements for performance
+     */
+    cacheElements() {
+        this.elements.drawer = document.getElementById('chat-drawer');
+        this.elements.fab = document.getElementById('drawer-fab');
+        this.elements.overlay = document.getElementById('drawer-overlay');
+        this.elements.layout = document.querySelector('.main-layout');
+        this.elements.input = document.getElementById('user-input');
+    },
+
+    /**
+     * Setup event listeners for mobile responsiveness
+     */
+    setupEventListeners() {
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const wasMobile = this.isMobile;
+            this.detectMobile();
+            if (wasMobile !== this.isMobile) {
+                this.cacheElements();
+                if (this.isMobile) {
+                    this.initializeMobileState();
+                }
+            }
+        });
+
+        // Handle orientation change
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
+        });
+    },
+
+    /**
+     * Initialize mobile state on load
+     * Drawer starts hidden, only sphere visible
+     */
+    initializeMobileState() {
+        if (!this.elements.drawer) this.cacheElements();
+        
+        this.elements.drawer.classList.remove('open');
+        this.elements.fab.classList.remove('hidden');
+        this.elements.overlay.classList.remove('visible');
+        this.elements.layout.classList.add('drawer-closed');
+    },
+
+    /**
+     * Check if drawer is currently open
+     */
+    isDrawerOpen() {
+        return this.elements.drawer.classList.contains('open');
+    },
+
+    /**
+     * Open chat drawer
+     * - Shows chat panel
+     * - Hides FAB button
+     * - Shows overlay
+     * - Removes drawer-closed state
+     * - Auto-focuses input
+     */
+    openDrawer() {
+        if (this.isDrawerOpen()) return;
+
+        this.elements.drawer.classList.add('open');
+        this.elements.fab.classList.add('hidden');
+        this.elements.overlay.classList.add('visible');
+        this.elements.layout.classList.remove('drawer-closed');
+
+        // Auto-focus input after animation
+        setTimeout(() => {
+            if (this.elements.input) this.elements.input.focus();
+        }, 400);
+
+        // Trigger resize for sphere centering
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
+    },
+
+    /**
+     * Close chat drawer
+     * - Hides chat panel
+     * - Shows FAB button
+     * - Hides overlay
+     * - Shows sphere as main focus
+     */
+    closeDrawer() {
+        if (!this.isDrawerOpen()) return;
+
+        this.elements.drawer.classList.remove('open');
+        this.elements.fab.classList.remove('hidden');
+        this.elements.overlay.classList.remove('visible');
+        this.elements.layout.classList.add('drawer-closed');
+
+        // Trigger resize for sphere centering
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
+    },
+
+    /**
+     * Toggle drawer state
+     */
+    toggle() {
+        if (this.isDrawerOpen()) {
+            this.closeDrawer();
+        } else {
+            this.openDrawer();
+        }
+    }
+};
+
 // Load history and initialize drawer state
 window.addEventListener('load', () => {
     loadHistory();
-
-    // Mobile: Start with drawer closed
-    if (window.innerWidth <= 768) {
-        const drawer = document.getElementById('chat-drawer');
-        const fab = document.getElementById('drawer-fab');
-        const overlay = document.getElementById('drawer-overlay');
-        const layout = document.querySelector('.main-layout');
-
-        if (drawer) drawer.classList.remove('open');
-        if (fab) fab.classList.add('visible');
-        if (overlay) overlay.classList.remove('visible');
-        if (layout) layout.classList.add('drawer-closed');
-    }
+    MobileUX.init();
 });
 
 /* ─── Drawer Logic ─── */
 function toggleDrawer() {
-    const drawer = document.getElementById('chat-drawer');
-    const fab = document.getElementById('drawer-fab');
-    const overlay = document.getElementById('drawer-overlay');
-    const layout = document.querySelector('.main-layout');
-
-    if (drawer.classList.contains('open')) {
-        // Close it
-        drawer.classList.remove('open');
-        fab.classList.add('visible');
-        overlay.classList.remove('visible');
-        layout.classList.add('drawer-closed');
-    } else {
-        // Open it
-        drawer.classList.add('open');
-        fab.classList.remove('visible');
-        overlay.classList.add('visible');
-        layout.classList.remove('drawer-closed');
-
-        // Focus input when opening
-        setTimeout(() => document.getElementById('user-input').focus(), 400);
-    }
-
-    // Trigger resize for sphere centering
-    setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
+    MobileUX.toggle();
 }
 
 /* ─── Mobile Drag to Close ─── */
