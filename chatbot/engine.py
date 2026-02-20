@@ -1,4 +1,6 @@
 import difflib
+import requests
+import json
 from .knowledge import KNOWLEDGE_BASE, RESPONSES
 from .languages import LanguageDetector
 
@@ -17,13 +19,42 @@ class ChatbotEngine:
         self.responses = RESPONSES
         self.threshold = 0.55
 
-    def process_message(self, message, context=None):
+    def get_live_weather(self, lat, lon):
+        """Fetch current exact weather using wttr.in which pulls from local airport/terminal data"""
+        try:
+            # Default to Surigao if coords match or if location was denied
+            location_query = f"{lat},{lon}"
+            if str(lat).startswith("9.7") and str(lon).startswith("125.5"):
+                location_query = "Surigao"
+                
+            url = f"https://wttr.in/{location_query}?format=j1"
+            resp = requests.get(url, timeout=6)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                curr = data["current_condition"][0]
+                
+                temp = curr["temp_C"]
+                desc = curr["weatherDesc"][0]["value"]
+                precip = curr["precipMM"]
+                
+                location_name = location_query if location_query == "Surigao" else "your exact location"
+                
+                return f"Current LIVE Weather in {location_name}: {temp}°C, {desc}. Precipitation: {precip}mm."
+        except Exception as e:
+            print(f"Weather API failed: {e}")
+        return "Weather unavailable at the moment."
+
+    def process_message(self, message, context=None, history=None):
         """
         Process a user message and return (response_text, new_context).
         context = { 'lang': 'en'|'tl'|'ceb'|'sgd', 'category': str|None }
+        history = list of previous messages [{'role':'user', 'content':'...'}, ...]
         """
         if context is None:
             context = {}
+        if history is None:
+            history = [{"role": "user", "content": message}]
 
         message_lower = message.lower().strip()
 
@@ -55,7 +86,15 @@ class ChatbotEngine:
         if any(w in message_lower for w in thanks_words):
             return self.responses['thanks'].get(lang, self.responses['thanks']['en']), context
 
-        # 4. Intent matching
+        # Try Local AI (Ollama) first
+        # Extract lat/lon from context, default to Surigao City coords (9.7500, 125.5000)
+        user_lat = context.get('lat', '9.7500')
+        user_lon = context.get('lon', '125.5000')
+        ollama_response = self._ask_ollama(history, lang, user_lat, user_lon)
+        if ollama_response:
+            return ollama_response, context
+
+        # 4. Intent matching (Fallback if Ollama is down)
         best_match = None
         best_score = 0
         matched_category = None
@@ -85,3 +124,47 @@ class ChatbotEngine:
 
         # 5. Fallback
         return self.responses['fallback'].get(lang, self.responses['fallback']['en']), context
+
+    def _ask_ollama(self, history, lang, lat, lon):
+        """
+        Send the message history to local Ollama instance using the /api/chat endpoint.
+        """
+        url = "http://localhost:11434/api/chat"
+        
+        # Get live weather dynamically
+        live_weather = self.get_live_weather(lat, lon)
+        
+        # Build a strict system prompt using our KNOWLEDGE_BASE
+        system_prompt = (
+            "You are the LGU Prime Assistant, an official Philippine government chatbot. "
+            f"Please respond in this language code: '{lang}' (e.g. 'en' for English, 'tl' for Tagalog/Filipino). "
+            f"{live_weather} "
+            "Use the following knowledge base to answer the user's question accurately. "
+            "Do NOT make up any requirements, steps, or fees. Keep your answer brief and conversational. "
+            "If the answer is not in the knowledge base, just say you don't have that information.\n\n"
+            "KNOWLEDGE BASE:\n"
+        )
+        
+        for category, data in self.knowledge.items():
+            info = data['responses']['en']
+            system_prompt += f"--- {category.upper()} ---\n{info}\n\n"
+            
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(history)
+            
+        payload = {
+            "model": "llama3.2",  # Small, fast model
+            "messages": messages,
+            "stream": False
+        }
+        
+        try:
+            # Short timeout so it falls back to keyword matching quickly if Ollama isn't running
+            response = requests.post(url, json=payload, timeout=8)
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("message", {}).get("content", "").strip()
+        except requests.exceptions.RequestException as e:
+            print(f"[Ollama] Connection bypassed (Ollama not running or model loading): {e}")
+            
+        return None

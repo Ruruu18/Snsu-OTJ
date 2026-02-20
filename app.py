@@ -32,10 +32,30 @@ def index():
 @app.route('/api/chat', methods=['POST'])
 def chat():
     user_message = request.json.get('message', '')
+    lat = request.json.get('latitude')
+    lon = request.json.get('longitude')
     user_context = session.get('context', {})
+    
+    if lat and lon:
+        user_context['lat'] = lat
+        user_context['lon'] = lon
+        
+    chat_history = session.get('history', [])
 
-    response, new_context = bot.process_message(user_message, user_context)
+    # Append user's new message to history
+    chat_history.append({"role": "user", "content": user_message})
+    
+    # Keep history to last 10 messages to prevent token bloat
+    if len(chat_history) > 10:
+        chat_history = chat_history[-10:]
+
+    response, new_context = bot.process_message(user_message, user_context, chat_history)
+    
+    # Append bot's response to history
+    chat_history.append({"role": "assistant", "content": response})
+    
     session['context'] = new_context
+    session['history'] = chat_history
 
     return jsonify({
         'response': response,
