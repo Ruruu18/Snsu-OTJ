@@ -82,25 +82,12 @@ var particleVS = NOISE + '\n' + [
     '',
     '  // ═══ DISPLACEMENT ═══',
     '  // Base: gentle organic breathing',
-    '  float n1 = snoise(nrm * 0.8 + t * 0.15) * 0.05;',
+    '  float n1 = snoise(nrm * 0.8 + t * 0.15) * 0.03;',
     '',
-    '  // Speaking: flowing waves - CALM & BIG',
-    '  // Slower speed for "calm" feel, higher amplitude for "big" pulse',
-    '  float st = t * 1.5; // Slower wave speed (was 3.0)',
+    '  // Speaking pulse: Uniform expansion so the base shape remains a perfect sphere',
+    '  float speakPulse = uIntensity * 0.6 + sin(t * 15.0) * uIntensity * 0.05;',
     '  ',
-    '  // Wave 1: Vertical distinct bands (voice frequency visualization)',
-    '  float w1 = sin(nrm.y * 5.0 - st) * 0.2; // Fewer bands, bigger waves',
-    '  ',
-    '  // Wave 2: Horizontal organic flow',
-    '  float w2 = sin(nrm.x * 4.0 + st * 0.7) * 0.1;',
-    '  ',
-    '  // Noise: Finely textured jitter - reduced for calmness',
-    '  float n2 = snoise(nrm * 2.5 + vec3(0, st, 0)) * 0.05;',
-    '  ',
-    '  // Combine: Base breathing + Speaking pulse (Big amplitude)',
-    '  float speakDisp = (w1 + w2 + n2) * uIntensity * 2.0; // BIG pulse',
-    '  ',
-    '  float disp = n1 + speakDisp;',
+    '  float disp = n1 + speakPulse;',
     '  vec3 newPos = pos + nrm * disp;',
     '',
     '  // ═══ FRESNEL (edge detection) ═══',
@@ -112,9 +99,10 @@ var particleVS = NOISE + '\n' + [
     '  rim = pow(rim, 1.5);', // smooth edge falloff
     '',
     '  // ═══ RIM SCATTER — push edge particles outward for halo ═══',
+    '  // Kept minimal during speech to preserve the sphere silhouette',
     '  float scatter = snoise(nrm * 3.0 + t * 0.5) * rim * 0.15;',
     '  scatter += snoise(nrm * 6.0 - t * 0.3) * rim * 0.08;',
-    '  newPos += nrm * scatter * (1.0 + uIntensity * 2.0);',
+    '  newPos += nrm * scatter * (1.0 + uIntensity * 0.5);',
     '',
     '  // Recalculate mvPos after scatter',
     '  mvPos = modelViewMatrix * vec4(newPos, 1.0);',
@@ -197,7 +185,8 @@ function initSphere() {
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.z = 3.8; // Enough room so sphere never clips
+    // Push camera back slightly more to give the pulse breathing room
+    camera.position.z = 4.5; // (was 3.8)
 
     renderer = new THREE.WebGLRenderer({
         canvas: canvas, alpha: true, antialias: true
@@ -278,21 +267,33 @@ function animate() {
                 try {
                     if (!dataArray) dataArray = new Uint8Array(window.audioAnalyser.frequencyBinCount);
                     window.audioAnalyser.getByteFrequencyData(dataArray);
-                    var sum = 0, bins = Math.floor(dataArray.length * 0.5);
-                    for (var i = 0; i < bins; i++) sum += dataArray[i];
+
+                    // Focus on vocal peaks for a punchy beat-sync effect
+                    var sum = 0, peak = 0;
+                    var bins = Math.min(40, dataArray.length); // Bass/low-mid bins are punchiest
+                    for (var i = 0; i < bins; i++) {
+                        sum += dataArray[i];
+                        if (dataArray[i] > peak) peak = dataArray[i];
+                    }
                     var avg = sum / bins;
-                    if (avg > 2) {
-                        var v = 0.25 + Math.pow(avg / 255, 1.2) * 0.60;
-                        v = Math.min(v, 0.80);
-                        envelope += ((v > envelope) ? 0.25 : 0.04) * (v - envelope);
+
+                    if (peak > 5) {
+                        var normAvg = avg / 255.0;
+                        var normPeak = peak / 255.0;
+                        // Reduce the extreme multiplier so it pulses but does not explode
+                        var v = (normPeak * 0.7 + normAvg * 0.3) * 1.0; // (was 1.5)
+                        v = Math.min(v, 0.9); // Cap the max intensity tighter
+
+                        // Fast attack, smooth decay on the envelope
+                        envelope += ((v > envelope) ? 0.4 : 0.05) * (v - envelope);
                         target = envelope;
                         gotAudio = true;
                     }
                 } catch (e) { }
             }
             if (!gotAudio) {
-                target = 0.45 + Math.sin(t * 3.5) * 0.12
-                    + Math.sin(t * 6.0) * 0.05;
+                // Fallback subtle fast pulse if no audio data is flowing
+                target = 0.3 + Math.sin(t * 8.0) * 0.15;
             }
             break;
 
@@ -301,7 +302,8 @@ function animate() {
             envelope = 0;
     }
 
-    intensity += (target - intensity) * 0.06;
+    // Fast attack to instantly hit the beat, smooth decay to ease out elegantly
+    intensity += (target - intensity) * ((target > intensity) ? 0.3 : 0.08);
 
     particleMat.uniforms.uTime.value = t;
     particleMat.uniforms.uIntensity.value = intensity;

@@ -220,7 +220,7 @@ KNOWLEDGE_BASE = {
 
 RESPONSES = {
     'greeting': {
-        'en': "Hello! 👋 I'm your **LGU Prime Assistant**. How can I help you today?\n\nYou can ask about Business Permits, Civil Registry, Taxes, Health, or Social Services.",
+        'en': "Hello!  I'm your **LGU Prime Assistant**. How can I help you today?\n\nYou can ask about Business Permits, Civil Registry, Taxes, Health, or Social Services.",
         'tl': "Magandang araw po! 👋 Ako ang inyong **LGU Prime Assistant**. Paano ko po kayo matutulungan?\n\nMaaari kayong magtanong tungkol sa Business Permit, Civil Registry, Buwis, Kalusugan, o Social Services."
     },
     'thanks': {

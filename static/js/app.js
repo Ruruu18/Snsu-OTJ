@@ -132,12 +132,20 @@ function sendMessage() {
     updateSphereState('listening'); // Visually indicate processing
 
     // Call API
+    let payload = { message: message };
+    const lat = sessionStorage.getItem('userLat');
+    const lon = sessionStorage.getItem('userLon');
+    if (lat && lon) {
+        payload.latitude = lat;
+        payload.longitude = lon;
+    }
+
     fetch('/api/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: message }),
+        body: JSON.stringify(payload),
     })
         .then(response => response.json())
         .then(data => {
@@ -378,11 +386,49 @@ const MobileUX = {
         }
     }
 };
+=======
+// Request location for weather API
+function requestLocation() {
+    if ("geolocation" in navigator && !sessionStorage.getItem('userLat')) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                sessionStorage.setItem('userLat', position.coords.latitude);
+                sessionStorage.setItem('userLon', position.coords.longitude);
+            },
+            (error) => {
+                console.log("Location denied, defaulting to Surigao");
+                sessionStorage.setItem('userLat', '9.7500');
+                sessionStorage.setItem('userLon', '125.5000');
+            },
+            { timeout: 5000 }
+        );
+    }
+}
+};
+
+// Request location for weather API
+function requestLocation() {
+    if ("geolocation" in navigator && !sessionStorage.getItem('userLat')) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                sessionStorage.setItem('userLat', position.coords.latitude);
+                sessionStorage.setItem('userLon', position.coords.longitude);
+            },
+            (error) => {
+                console.log("Location denied, defaulting to Surigao");
+                sessionStorage.setItem('userLat', '9.7500');
+                sessionStorage.setItem('userLon', '125.5000');
+            },
+            { timeout: 5000 }
+        );
+    }
+}
 
 // Load history and initialize drawer state
 window.addEventListener('load', () => {
     loadHistory();
     MobileUX.init();
+    requestLocation();
 });
 
 /* ─── Drawer Logic ─── */
