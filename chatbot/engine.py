@@ -20,34 +20,40 @@ class ChatbotEngine:
         self.threshold = 0.55
 
     def get_live_weather(self, lat, lon):
-        """Fetch current exact weather using wttr.in which pulls from local airport/terminal data"""
+        """Fetch current weather using open-meteo API for real-time local data"""
         try:
-            # Default to Surigao if coords match or if location was denied
-            location_query = f"{lat},{lon}"
-            if str(lat).startswith("9.7") and str(lon).startswith("125.5"):
-                location_query = "Surigao"
-                
-            url = f"https://wttr.in/{location_query}?format=j1"
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code"
             resp = requests.get(url, timeout=6)
             
             if resp.status_code == 200:
                 data = resp.json()
-                curr = data["current_condition"][0]
+                curr = data["current"]
                 
-                temp = curr["temp_C"]
-                desc = curr["weatherDesc"][0]["value"]
-                precip = curr["precipMM"]
+                temp = curr["temperature_2m"]
+                precip = curr["precipitation"]
+                code = curr["weather_code"]
                 
-                location_name = location_query if location_query == "Surigao" else "your exact location"
+                location_name = "Surigao" if str(lat).startswith("9.7") else "your exact location"
                 
-                desc_lower = desc.lower()
-                theme = "clear"
-                if any(w in desc_lower for w in ['rain', 'shower', 'drizzle', 'thunder', 'storm']):
-                    theme = "rain"
-                elif any(w in desc_lower for w in ['cloud', 'overcast', 'fog', 'mist']):
-                    theme = "cloudy"
-                elif any(w in desc_lower for w in ['clear', 'sun']):
+                # WMO Weather Codes mapping
+                if code in [0, 1]:
+                    desc = "Clear sky"
                     theme = "clear"
+                elif code in [2, 3, 45, 48]:
+                    desc = "Cloudy and overcast"
+                    theme = "cloudy"
+                elif code in [51, 53, 55, 56, 57]:
+                    desc = "Drizzle"
+                    theme = "rain"
+                elif code in [61, 63, 65, 66, 67, 80, 81, 82]:
+                    desc = "Rain showers"
+                    theme = "rain"
+                elif code in [95, 96, 99]:
+                    desc = "Thunderstorms"
+                    theme = "rain"
+                else:
+                    desc = "Variable"
+                    theme = "cloudy"
 
                 from datetime import datetime
                 hour = datetime.now().hour
@@ -117,6 +123,9 @@ class ChatbotEngine:
         if ollama_response:
             return ollama_response, context
 
+        if any(w in message_lower for w in weather_keywords):
+            return live_weather_str, context
+
         # 4. Intent matching (Fallback if Ollama is down)
         best_match = None
         best_score = 0
@@ -158,10 +167,13 @@ class ChatbotEngine:
         system_prompt = (
             "You are the LGU Prime Assistant, an official Philippine government chatbot. "
             f"Please respond in this language code: '{lang}' (e.g. 'en' for English, 'tl' for Tagalog/Filipino). "
-            f"{live_weather} "
-            "Use the following knowledge base to answer the user's question accurately. "
-            "Do NOT make up any requirements, steps, or fees. Keep your answer brief and conversational. "
-            "If the answer is not in the knowledge base, just say you don't have that information.\n\n"
+            "CRITICAL INSTRUCTION: You already have the REAL-TIME LIVE WEATHER DATA provided below. "
+            "You MUST use this provided data to answer any weather questions. "
+            "NEVER apologize or say you cannot access servers, because the data is already given to you here: \n"
+            f"[LIVE WEATHER DATA]: {live_weather}\n\n"
+            "Use the following knowledge base to answer other questions. "
+            "Do NOT make up any requirements. Keep your answer brief, warm, and conversational. "
+            "If the answer is not in the knowledge base or weather data, just say you don't have that information.\n\n"
             "KNOWLEDGE BASE:\n"
         )
         
