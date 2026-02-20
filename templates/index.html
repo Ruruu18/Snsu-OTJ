@@ -211,6 +211,18 @@
       </div>
     </div>
 
+    <!-- Custom Modal -->
+    <div class="custom-modal-overlay" id="custom-modal-overlay">
+        <div class="custom-modal glass-panel">
+            <h3 id="custom-modal-title">Confirm Action</h3>
+            <p id="custom-modal-body">Are you sure?</p>
+            <div class="custom-modal-actions">
+                <button class="modal-btn cancel" id="custom-modal-cancel">Cancel</button>
+                <button class="modal-btn confirm" id="custom-modal-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/sphere.js') }}"></script>
     <script src="{{ url_for('static', filename='js/voice.js') }}"></script>

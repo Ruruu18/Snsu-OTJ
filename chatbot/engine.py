@@ -40,10 +40,24 @@ class ChatbotEngine:
                 
                 location_name = location_query if location_query == "Surigao" else "your exact location"
                 
-                return f"Current LIVE Weather in {location_name}: {temp}°C, {desc}. Precipitation: {precip}mm."
+                desc_lower = desc.lower()
+                theme = "clear"
+                if any(w in desc_lower for w in ['rain', 'shower', 'drizzle', 'thunder', 'storm']):
+                    theme = "rain"
+                elif any(w in desc_lower for w in ['cloud', 'overcast', 'fog', 'mist']):
+                    theme = "cloudy"
+                elif any(w in desc_lower for w in ['clear', 'sun']):
+                    theme = "clear"
+
+                from datetime import datetime
+                hour = datetime.now().hour
+                if (hour < 6 or hour >= 18) and theme == "clear":
+                    theme = "night"
+                
+                return f"Current LIVE Weather in {location_name}: {temp}°C, {desc}. Precipitation: {precip}mm.", theme
         except Exception as e:
             print(f"Weather API failed: {e}")
-        return "Weather unavailable at the moment."
+        return "Weather unavailable at the moment.", "clear"
 
     def process_message(self, message, context=None, history=None):
         """
@@ -90,7 +104,16 @@ class ChatbotEngine:
         # Extract lat/lon from context, default to Surigao City coords (9.7500, 125.5000)
         user_lat = context.get('lat', '9.7500')
         user_lon = context.get('lon', '125.5000')
-        ollama_response = self._ask_ollama(history, lang, user_lat, user_lon)
+
+        live_weather_str, current_theme = self.get_live_weather(user_lat, user_lon)
+        
+        weather_keywords = ['weather', 'rain', 'sun', 'temperature', 'panahon', 'ulan', 'init', 'bagyo', 'forecast']
+        if any(w in message_lower for w in weather_keywords):
+            context['weather_theme'] = current_theme
+        else:
+            context.pop('weather_theme', None)
+
+        ollama_response = self._ask_ollama(history, lang, live_weather_str)
         if ollama_response:
             return ollama_response, context
 
@@ -125,14 +148,11 @@ class ChatbotEngine:
         # 5. Fallback
         return self.responses['fallback'].get(lang, self.responses['fallback']['en']), context
 
-    def _ask_ollama(self, history, lang, lat, lon):
+    def _ask_ollama(self, history, lang, live_weather):
         """
         Send the message history to local Ollama instance using the /api/chat endpoint.
         """
         url = "http://localhost:11434/api/chat"
-        
-        # Get live weather dynamically
-        live_weather = self.get_live_weather(lat, lon)
         
         # Build a strict system prompt using our KNOWLEDGE_BASE
         system_prompt = (
