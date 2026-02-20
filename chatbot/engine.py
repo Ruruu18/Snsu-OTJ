@@ -22,7 +22,15 @@ class ChatbotEngine:
     def get_live_weather(self, lat, lon):
         """Fetch current weather using open-meteo API for real-time local data"""
         try:
-            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code"
+            # Validate coordinates to prevent "null" or "undefined" breaking the API
+            try:
+                valid_lat = float(lat)
+                valid_lon = float(lon)
+            except (ValueError, TypeError):
+                print(f"Invalid coordinates received ({lat}, {lon}), defaulting to Surigao.")
+                valid_lat, valid_lon = 9.7500, 125.5000
+                
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={valid_lat}&longitude={valid_lon}&current=temperature_2m,precipitation,weather_code"
             resp = requests.get(url, timeout=6)
             
             if resp.status_code == 200:
@@ -33,7 +41,7 @@ class ChatbotEngine:
                 precip = curr["precipitation"]
                 code = curr["weather_code"]
                 
-                location_name = "Surigao" if str(lat).startswith("9.7") else "your exact location"
+                location_name = "Surigao" if str(valid_lat).startswith("9.7") else "your exact location"
                 
                 # WMO Weather Codes mapping
                 if code in [0, 1]:
@@ -61,6 +69,10 @@ class ChatbotEngine:
                     theme = "night"
                 
                 return f"Current LIVE Weather in {location_name}: {temp}°C, {desc}. Precipitation: {precip}mm.", theme
+            else:
+                print(f"Weather API returned non-200 status: {resp.status_code} - {resp.text}")
+                raise Exception(f"Weather API returned {resp.status_code}")
+
         except Exception as e:
             print(f"Weather API failed: {e}")
         return "Weather unavailable at the moment.", "clear"
