@@ -75,7 +75,7 @@ class ChatbotEngine:
         self.threshold = 0.55
 
     def get_live_weather(self, lat, lon):
-        """Fetch current exact weather using wttr.in which pulls from local airport/terminal data"""
+        """Fetch current weather using open-meteo API for real-time local data"""
         try:
             # Default to Surigao if coords match or if location was denied
             location_query = f"{lat},{lon}"
@@ -83,22 +83,51 @@ class ChatbotEngine:
                 location_query = "Surigao"
                 
             url = f"https://wttr.in/{location_query}?format=j1"
-            resp = _requests_get(url, timeout=6)
+            resp = requests.get(url, timeout=6)
             
             if resp.status_code == 200:
                 data = resp.json()
-                curr = data["current_condition"][0]
+                curr = data["current"]
                 
-                temp = curr["temp_C"]
-                desc = curr["weatherDesc"][0]["value"]
-                precip = curr["precipMM"]
+                temp = curr["temperature_2m"]
+                precip = curr["precipitation"]
+                code = curr["weather_code"]
                 
-                location_name = location_query if location_query == "Surigao" else "your exact location"
+                location_name = "Surigao" if str(valid_lat).startswith("9.7") else "your exact location"
                 
-                return f"Current LIVE Weather in {location_name}: {temp}°C, {desc}. Precipitation: {precip}mm."
+                # WMO Weather Codes mapping
+                if code in [0, 1]:
+                    desc = "Clear sky"
+                    theme = "clear"
+                elif code in [2, 3, 45, 48]:
+                    desc = "Cloudy and overcast"
+                    theme = "cloudy"
+                elif code in [51, 53, 55, 56, 57]:
+                    desc = "Drizzle"
+                    theme = "rain"
+                elif code in [61, 63, 65, 66, 67, 80, 81, 82]:
+                    desc = "Rain showers"
+                    theme = "rain"
+                elif code in [95, 96, 99]:
+                    desc = "Thunderstorms"
+                    theme = "rain"
+                else:
+                    desc = "Variable"
+                    theme = "cloudy"
+
+                from datetime import datetime
+                hour = datetime.now().hour
+                if (hour < 6 or hour >= 18) and theme == "clear":
+                    theme = "night"
+                
+                return f"Current LIVE Weather in {location_name}: {temp}°C, {desc}. Precipitation: {precip}mm.", theme
+            else:
+                print(f"Weather API returned non-200 status: {resp.status_code} - {resp.text}")
+                raise Exception(f"Weather API returned {resp.status_code}")
+
         except Exception as e:
             print(f"Weather API failed: {e}")
-        return "Weather unavailable at the moment."
+        return "Weather unavailable at the moment.", "clear"
 
     def process_message(self, message, context=None, history=None):
         """
@@ -145,9 +174,21 @@ class ChatbotEngine:
         # Extract lat/lon from context, default to Surigao City coords (9.7500, 125.5000)
         user_lat = context.get('lat', '9.7500')
         user_lon = context.get('lon', '125.5000')
-        ollama_response = self._ask_ollama(history, lang, user_lat, user_lon)
+
+        live_weather_str, current_theme = self.get_live_weather(user_lat, user_lon)
+        
+        weather_keywords = ['weather', 'rain', 'sun', 'temperature', 'panahon', 'ulan', 'init', 'bagyo', 'forecast']
+        if any(w in message_lower for w in weather_keywords):
+            context['weather_theme'] = current_theme
+        else:
+            context.pop('weather_theme', None)
+
+        ollama_response = self._ask_ollama(history, lang, live_weather_str)
         if ollama_response:
             return ollama_response, context
+
+        if any(w in message_lower for w in weather_keywords):
+            return live_weather_str, context
 
         # 4. Intent matching (Fallback if Ollama is down)
         best_match = None
@@ -180,11 +221,11 @@ class ChatbotEngine:
         # 5. Fallback
         return self.responses['fallback'].get(lang, self.responses['fallback']['en']), context
 
-    def _ask_ollama(self, history, lang, lat, lon):
+    def _ask_ollama(self, history, lang, live_weather):
         """
         Send the message history to local Ollama instance using the /api/chat endpoint.
         """
-        url = "http://192.168.43.92:11434/api/chat"
+        url = "http://localhost:11434/api/chat"
         
         # Get live weather dynamically
         live_weather = self.get_live_weather(lat, lon)
@@ -193,10 +234,13 @@ class ChatbotEngine:
         system_prompt = (
             "You are the LGU Prime Assistant, an official Philippine government chatbot. "
             f"Please respond in this language code: '{lang}' (e.g. 'en' for English, 'tl' for Tagalog/Filipino). "
-            f"{live_weather} "
-            "Use the following knowledge base to answer the user's question accurately. "
-            "Do NOT make up any requirements, steps, or fees. Keep your answer brief and conversational. "
-            "If the answer is not in the knowledge base, just say you don't have that information.\n\n"
+            "CRITICAL INSTRUCTION: You already have the REAL-TIME LIVE WEATHER DATA provided below. "
+            "You MUST use this provided data to answer any weather questions. "
+            "NEVER apologize or say you cannot access servers, because the data is already given to you here: \n"
+            f"[LIVE WEATHER DATA]: {live_weather}\n\n"
+            "Use the following knowledge base to answer other questions. "
+            "Do NOT make up any requirements. Keep your answer brief, warm, and conversational. "
+            "If the answer is not in the knowledge base or weather data, just say you don't have that information.\n\n"
             "KNOWLEDGE BASE:\n"
         )
         

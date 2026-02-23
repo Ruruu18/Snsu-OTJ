@@ -152,6 +152,26 @@ function sendMessage() {
             // Remove typing
             hideTyping();
 
+            // Handle weather theme
+            const chatContainer = document.querySelector('.chat-container');
+            const weatherBackdrop = document.getElementById('weather-backdrop');
+
+            if (chatContainer) chatContainer.classList.remove('theme-clear', 'theme-rain', 'theme-night', 'theme-cloudy');
+            document.body.classList.remove('theme-clear', 'theme-rain', 'theme-night', 'theme-cloudy');
+
+            if (data.context && data.context.weather_theme) {
+                const themeClass = `theme-${data.context.weather_theme}`;
+                if (chatContainer) chatContainer.classList.add(themeClass);
+                document.body.classList.add(themeClass);
+
+                // Inject SVG animations
+                if (weatherBackdrop) {
+                    renderWeatherBackdrop(data.context.weather_theme, weatherBackdrop);
+                }
+            } else if (weatherBackdrop) {
+                weatherBackdrop.innerHTML = '';
+            }
+
             // Add bot response
             appendMessage(data.response, 'bot');
 
@@ -207,10 +227,69 @@ function saveToHistory(msgObj) {
     localStorage.setItem('chatHistory', JSON.stringify(history));
 }
 
+// Custom Modal Helper
+function showCustomModal(title, body, onConfirm, showCancel = true, confirmText = 'Confirm', confirmClass = '') {
+    const overlay = document.getElementById('custom-modal-overlay');
+    const titleEl = document.getElementById('custom-modal-title');
+    const bodyEl = document.getElementById('custom-modal-body');
+    const cancelBtn = document.getElementById('custom-modal-cancel');
+    const confirmBtn = document.getElementById('custom-modal-confirm');
+
+    if (!overlay) return;
+
+    titleEl.textContent = title;
+    bodyEl.textContent = body;
+    cancelBtn.style.display = showCancel ? 'block' : 'none';
+    confirmBtn.textContent = confirmText;
+    confirmBtn.className = 'modal-btn confirm ' + confirmClass; // Apply custom class
+
+    // Remove old listeners to prevent multiple fires by cloning
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+    newConfirmBtn.addEventListener('click', () => {
+        overlay.classList.remove('visible');
+        if (onConfirm) onConfirm();
+    });
+
+    newCancelBtn.addEventListener('click', () => {
+        overlay.classList.remove('visible');
+    });
+
+    overlay.classList.add('visible');
+}
+
 document.getElementById('clear-history').addEventListener('click', () => {
-    localStorage.removeItem('chatHistory');
-    document.getElementById('chat-messages').innerHTML = '';
-    loadHistory(); // Re-trigger greeting
+    if (window.isBotSpeaking) {
+        showCustomModal(
+            "Bot is Speaking",
+            "Do you wish to stop the bot from speaking?",
+            () => {
+                if (typeof stopSpeaking === 'function') {
+                    stopSpeaking();
+                }
+            },
+            true, // Show cancel button
+            "Stop Immediately", // Custom confirm button text
+            "danger" // Custom class for danger action
+        );
+        return;
+    }
+
+    showCustomModal(
+        "Clear History",
+        "Are you sure you want to clear the chat history? This cannot be undone.",
+        () => {
+            localStorage.removeItem('chatHistory');
+            document.getElementById('chat-messages').innerHTML = '';
+            loadHistory(); // Re-trigger greeting
+        },
+        true,
+        "Confirm"
+    );
 });
 
 function showTyping() {
@@ -302,7 +381,7 @@ const MobileUX = {
 
     initializeMobileState() {
         if (!this.elements.drawer) this.cacheElements();
-        
+
         this.elements.drawer.classList.remove('open');
         this.elements.fab.classList.remove('hidden');
         this.elements.overlay.classList.remove('visible');
@@ -356,6 +435,25 @@ const MobileUX = {
             this.openDrawer();
         }
     }
+};
+=======
+// Request location for weather API
+function requestLocation() {
+    if ("geolocation" in navigator && !sessionStorage.getItem('userLat')) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                sessionStorage.setItem('userLat', position.coords.latitude);
+                sessionStorage.setItem('userLon', position.coords.longitude);
+            },
+            (error) => {
+                console.log("Location denied, defaulting to Surigao");
+                sessionStorage.setItem('userLat', '9.7500');
+                sessionStorage.setItem('userLon', '125.5000');
+            },
+            { timeout: 5000 }
+        );
+    }
+}
 };
 
 // Request location for weather API
@@ -430,4 +528,55 @@ if (handle) {
             drawer.style.transform = '';
         }
     });
+}
+
+/**
+ * ─── Weather Background UI Generator ───
+ */
+function renderWeatherBackdrop(theme, container) {
+    let html = '';
+    if (theme === 'clear') {
+        html = `
+            <div class="weather-sun"></div>
+            <div class="weather-cloud float-1" style="top: 15%; animation-duration: 40s;"></div>
+            <div class="weather-cloud float-2" style="top: 25%; animation-duration: 60s;"></div>
+            <div class="weather-cloud float-3" style="top: 10%; animation-duration: 45s; transform: scale(0.8);"></div>
+        `;
+    } else if (theme === 'rain') {
+        html = `
+            <div class="weather-cloud dark float-1" style="top: -5%; transform: scale(1.5);"></div>
+            <div class="weather-cloud dark float-2" style="top: -10%; transform: scale(2);"></div>
+            <div class="weather-cloud dark float-3" style="top: 5%;"></div>
+            <div class="rain-container">
+        `;
+        for (let i = 0; i < 60; i++) {
+            const left = Math.random() * 100;
+            const animDur = 0.5 + Math.random() * 0.4;
+            const delay = Math.random() * 2;
+            html += `<div class="rain-drop" style="left: ${left}%; animation-duration: ${animDur}s; animation-delay: ${delay}s;"></div>`;
+        }
+        html += `</div>`;
+    } else if (theme === 'cloudy') {
+        html = `
+            <video class="weather-video-bg" autoplay loop muted playsinline>
+                <source src="/static/videos/vecteezy_dark-storm-clouds-time-lapse_1625764.mp4" type="video/mp4">
+            </video>
+            <div class="weather-vignette"></div>
+        `;
+    } else if (theme === 'night') {
+        html = `
+            <div class="weather-moon"></div>
+            <div class="stars-container">
+        `;
+        for (let i = 0; i < 70; i++) {
+            const left = Math.random() * 100;
+            const top = Math.random() * 80;
+            const size = 1 + Math.random() * 3;
+            const animDur = 1.5 + Math.random() * 4;
+            const delay = Math.random() * 3;
+            html += `<div class="weather-star" style="left: ${left}%; top: ${top}%; width: ${size}px; height: ${size}px; animation-duration: ${animDur}s; animation-delay: ${delay}s;"></div>`;
+        }
+        html += `</div>`;
+    }
+    container.innerHTML = html;
 }
