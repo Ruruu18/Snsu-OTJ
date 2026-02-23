@@ -267,3 +267,4 @@ class ChatbotEngine:
             print(f"[Ollama] Connection bypassed (Ollama not running or model loading): {e}")
             
         return None
+    
