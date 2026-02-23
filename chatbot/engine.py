@@ -184,7 +184,7 @@ class ChatbotEngine:
         """
         Send the message history to local Ollama instance using the /api/chat endpoint.
         """
-        url = "http://localhost:11434/api/chat"
+        url = "http://192.168.43.92:11434/api/chat"
         
         # Get live weather dynamically
         live_weather = self.get_live_weather(lat, lon)
@@ -208,7 +208,7 @@ class ChatbotEngine:
         messages.extend(history)
             
         payload = {
-            "model": "llama3.2",  # Small, fast model
+            "model": "qwen2.5:3b",  # Small, fast model
             "messages": messages,
             "stream": False
         }

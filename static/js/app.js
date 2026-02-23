@@ -245,10 +245,6 @@ function updateLangBadge(langCode) {
     }
 }
 
-/* ═══════════════════════════════════════════════════════════════ */
-/* Mobile UX Management System */
-/* ═══════════════════════════════════════════════════════════════ */
-
 const MobileUX = {
     isMobile: false,
     elements: {
@@ -271,16 +267,10 @@ const MobileUX = {
         }
     },
 
-    /**
-     * Detect if device is mobile
-     */
     detectMobile() {
         this.isMobile = window.innerWidth <= 768;
     },
 
-    /**
-     * Cache DOM elements for performance
-     */
     cacheElements() {
         this.elements.drawer = document.getElementById('chat-drawer');
         this.elements.fab = document.getElementById('drawer-fab');
@@ -289,9 +279,7 @@ const MobileUX = {
         this.elements.input = document.getElementById('user-input');
     },
 
-    /**
-     * Setup event listeners for mobile responsiveness
-     */
+
     setupEventListeners() {
         // Handle window resize
         window.addEventListener('resize', () => {
@@ -311,10 +299,7 @@ const MobileUX = {
         });
     },
 
-    /**
-     * Initialize mobile state on load
-     * Drawer starts hidden, only sphere visible
-     */
+
     initializeMobileState() {
         if (!this.elements.drawer) this.cacheElements();
         
@@ -331,14 +316,6 @@ const MobileUX = {
         return this.elements.drawer.classList.contains('open');
     },
 
-    /**
-     * Open chat drawer
-     * - Shows chat panel
-     * - Hides FAB button
-     * - Shows overlay
-     * - Removes drawer-closed state
-     * - Auto-focuses input
-     */
     openDrawer() {
         if (this.isDrawerOpen()) return;
 
@@ -356,13 +333,7 @@ const MobileUX = {
         setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
     },
 
-    /**
-     * Close chat drawer
-     * - Hides chat panel
-     * - Shows FAB button
-     * - Hides overlay
-     * - Shows sphere as main focus
-     */
+
     closeDrawer() {
         if (!this.isDrawerOpen()) return;
 
