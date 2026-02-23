@@ -386,25 +386,6 @@ const MobileUX = {
         }
     }
 };
-=======
-// Request location for weather API
-function requestLocation() {
-    if ("geolocation" in navigator && !sessionStorage.getItem('userLat')) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                sessionStorage.setItem('userLat', position.coords.latitude);
-                sessionStorage.setItem('userLon', position.coords.longitude);
-            },
-            (error) => {
-                console.log("Location denied, defaulting to Surigao");
-                sessionStorage.setItem('userLat', '9.7500');
-                sessionStorage.setItem('userLon', '125.5000');
-            },
-            { timeout: 5000 }
-        );
-    }
-}
-};
 
 // Request location for weather API
 function requestLocation() {

@@ -1,8 +1,63 @@
 import difflib
-import requests
 import json
+import urllib.request
+import urllib.parse
+import urllib.error
 from .knowledge import KNOWLEDGE_BASE, RESPONSES
 from .languages import LanguageDetector
+
+# Prefer the 'requests' package if available, otherwise provide a minimal compatible fallback
+try:
+    import requests  # type: ignore
+    from requests.exceptions import RequestException as RequestsRequestException  # type: ignore
+    _HAS_REQUESTS = True
+except Exception:
+    requests = None
+    class RequestsRequestException(Exception):
+        pass
+    _HAS_REQUESTS = False
+
+def _requests_get(url, timeout=6):
+    if _HAS_REQUESTS:
+        return requests.get(url, timeout=timeout)
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            status = resp.getcode()
+            body = resp.read().decode('utf-8')
+            class Resp:
+                status_code = status
+                _text = body
+                def json(self):
+                    return json.loads(self._text)
+                @property
+                def text(self):
+                    return self._text
+            return Resp()
+    except urllib.error.URLError as e:
+        raise RequestsRequestException(e)
+
+def _requests_post(url, json=None, timeout=8):
+    if _HAS_REQUESTS:
+        return requests.post(url, json=json, timeout=timeout)
+    import json as _json
+    data = _json.dumps(json).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            status = resp.getcode()
+            body = resp.read().decode('utf-8')
+            class Resp:
+                status_code = status
+                _text = body
+                def json(self):
+                    return _json.loads(self._text)
+                @property
+                def text(self):
+                    return self._text
+            return Resp()
+    except urllib.error.URLError as e:
+        raise RequestsRequestException(e)
 
 
 class ChatbotEngine:
@@ -28,7 +83,7 @@ class ChatbotEngine:
                 location_query = "Surigao"
                 
             url = f"https://wttr.in/{location_query}?format=j1"
-            resp = requests.get(url, timeout=6)
+            resp = _requests_get(url, timeout=6)
             
             if resp.status_code == 200:
                 data = resp.json()
@@ -160,11 +215,11 @@ class ChatbotEngine:
         
         try:
             # Short timeout so it falls back to keyword matching quickly if Ollama isn't running
-            response = requests.post(url, json=payload, timeout=8)
+            response = _requests_post(url, json=payload, timeout=8)
             if response.status_code == 200:
                 result = response.json()
                 return result.get("message", {}).get("content", "").strip()
-        except requests.exceptions.RequestException as e:
+        except RequestsRequestException as e:
             print(f"[Ollama] Connection bypassed (Ollama not running or model loading): {e}")
             
         return None
