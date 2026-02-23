@@ -259,7 +259,7 @@ class ChatbotEngine:
         
         try:
             # Short timeout so it falls back to keyword matching quickly if Ollama isn't running
-            response = _requests_post(url, json=payload, timeout=8)
+            response = requests.post(url, json=payload, timeout=15)
             if response.status_code == 200:
                 result = response.json()
                 return result.get("message", {}).get("content", "").strip()
